@@ -1,0 +1,5 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Options Prefix="{{" Postfix="}}">
+  <Option Id="1" Name="B2CUI Option 1" TemplateFolder="C:\Users\RobB\Desktop\variables-test\From" OutputFolder="C:\Users\RobB\Desktop\variables-test\To" VariableFile="C:\Code\files\b2ctemplates_development.vars" SearchPattern="*.html" />
+  <Option Id="2" Name="B2CUI Option 2" TemplateFolder="C:\Users\RobB\Desktop\variables-test\From" OutputFolder="C:\Users\RobB\Desktop\variables-test\To" VariableFile="C:\Code\files\b2ctemplates_development.vars" SearchPattern="*.html" />
+</Options>
