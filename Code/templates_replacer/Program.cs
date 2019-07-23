@@ -101,6 +101,11 @@ namespace templates_replacer
                 List<KeyValuePair<string, string>> variables = GetContents(option.VariableFile);
                 IEnumerable<string> templateFiles = Directory.EnumerateFiles(option.TemplateFolder, option.SearchPattern);
 
+                if (!Directory.Exists(option.OutputFolder))
+                {
+                    Directory.CreateDirectory(option.OutputFolder);
+                }
+
                 foreach (string templateFile in templateFiles)
                 {
                     string resultText = GetTemplateFileText(templateFile);
