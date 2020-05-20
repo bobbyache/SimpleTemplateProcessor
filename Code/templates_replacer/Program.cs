@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Web;
 using System.Xml.Linq;
 
 namespace templates_replacer
@@ -10,12 +11,20 @@ namespace templates_replacer
     {
         private static string prefix = "";
         private static string postfix = "";
+        private static string urlEncodedPrefix = "";
+        private static string urlEncodedPostfix = "";
 
         private static void FetchPlaceFixers(XDocument document)
         {
-            var rootElement = document.Element("Options");
-            prefix = rootElement.Attribute("Prefix").Value;
-            postfix = rootElement.Attribute("Postfix").Value;
+            var normalPrefixElement = document.Element("Settings").Element("Prefixes").Elements("Prefix")
+                .Where(p => p.Attribute("Id").Value == "NORMAL").SingleOrDefault();
+            prefix = normalPrefixElement.Attribute("Prefix").Value;
+            postfix = normalPrefixElement.Attribute("Postfix").Value;
+
+            var urlEncodedPrefixElement = document.Element("Settings").Element("Prefixes").Elements("Prefix")
+                .Where(p => p.Attribute("Id").Value == "HTMLENC").SingleOrDefault();
+            urlEncodedPrefix = urlEncodedPrefixElement.Attribute("Prefix").Value;
+            urlEncodedPostfix = urlEncodedPrefixElement.Attribute("Postfix").Value;
         }
 
         static void Main(string[] args)
@@ -68,7 +77,7 @@ namespace templates_replacer
 
         private static Option[] GetConfiguredOptions(XDocument document)
         {
-            var options = document.Element("Options").Elements("Option").Select((opt) => 
+            var options = document.Element("Settings").Element("Options").Elements("Option").Select((opt) => 
                 new Option
                 {
                     Id = opt.Attribute("Id").Value,
@@ -112,6 +121,7 @@ namespace templates_replacer
 
                     foreach (var variable in variables)
                     {
+                        resultText = resultText.Replace(urlEncodedPrefix + variable.Key + urlEncodedPostfix, HttpUtility.HtmlEncode(variable.Value));
                         resultText = resultText.Replace(prefix + variable.Key + postfix, variable.Value);
                     }
                     SaveText(resultText, Path.Combine(option.OutputFolder, Path.GetFileName(templateFile)));
@@ -162,8 +172,12 @@ namespace templates_replacer
                     string input = null;
                     while ((input = streamReader.ReadLine()) != null)
                     {
-                        var keyVal = input.Trim().Split('=', StringSplitOptions.RemoveEmptyEntries);
-                        idList.Add(new KeyValuePair<string, string>(keyVal[0], keyVal[1]));
+                        if (!input.Trim().StartsWith("#"))
+                        {
+                            var keyVal = input.Trim().Split('=', StringSplitOptions.RemoveEmptyEntries);
+                            idList.Add(new KeyValuePair<string, string>(keyVal[0], keyVal[1]));
+                        }
+
                     }
                 }
             }
