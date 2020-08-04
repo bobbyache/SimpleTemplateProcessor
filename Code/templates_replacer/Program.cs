@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using System.Web;
 using System.Xml.Linq;
 
@@ -110,6 +113,10 @@ namespace templates_replacer
                 List<KeyValuePair<string, string>> variables = GetContents(option.VariableFile);
                 IEnumerable<string> templateFiles = Directory.EnumerateFiles(option.TemplateFolder, option.SearchPattern);
 
+                Console.WriteLine($"Data from {option.VariableFile}");
+                Console.WriteLine($"Processing from {option.TemplateFolder}");
+                Console.WriteLine($"Output to {option.OutputFolder}");
+
                 if (!Directory.Exists(option.OutputFolder))
                 {
                     Directory.CreateDirectory(option.OutputFolder);
@@ -117,24 +124,67 @@ namespace templates_replacer
 
                 foreach (string templateFile in templateFiles)
                 {
-                    string resultText = GetTemplateFileText(templateFile);
-
-                    foreach (var variable in variables)
-                    {
-                        resultText = resultText.Replace(urlEncodedPrefix + variable.Key + urlEncodedPostfix, HttpUtility.HtmlEncode(variable.Value));
-                        resultText = resultText.Replace(prefix + variable.Key + postfix, variable.Value);
-                    }
-                    SaveText(resultText, Path.Combine(option.OutputFolder, Path.GetFileName(templateFile)));
+                    ProcessTemplateFile(templateFile, variables, option.OutputFolder);
                 }
 
-                Console.WriteLine("Done");
+                foreach(string templateFile in templateFiles)
+                {
+                    CheckTemplateFile(templateFile, option.OutputFolder);
+                }
+
+                Console.WriteLine("DONE PROCESSING !!! HAVE A NICE DAY !!!");
                 Console.ReadKey();
 
             }
             catch (Exception ex)
             {
+                Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine("FAILED TO WRITE TO EXECUTE");
+                Console.WriteLine(ex.StackTrace);
+                Console.ForegroundColor = ConsoleColor.White;
             }
+        }
+
+        private static void CheckTemplateFile(string templateFile, string outputFolder)
+        {
+            var resultFile = Path.Combine(outputFolder, Path.GetFileName(templateFile));
+            if (File.Exists(resultFile))
+            {
+                var resultText = GetFileText(resultFile);
+                var list = UnknownPlaceholders(resultText, prefix + "[0-9a-zA-z-]+" + postfix);
+                list.AddRange(UnknownPlaceholders(resultText, urlEncodedPrefix + "[0-9a-zA-z-]+" + urlEncodedPostfix));
+
+                if (list.Count > 0)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("Found the following unknown placeholders - these were not replaced:");
+                    foreach (var item in list)
+                    {
+                        Console.WriteLine(item);
+                    }
+                    Console.ForegroundColor = ConsoleColor.White;
+                }
+            }
+        }
+
+        private static List<string> UnknownPlaceholders(string source, string pattern)
+        {
+            string search = "{{[0-9a-zA-z-]+}}";
+            MatchCollection matches = Regex.Matches(source, search);
+
+            return matches.Select(m => m.ToString()).ToList();
+        }
+
+        private static void ProcessTemplateFile(string templateFile, List<KeyValuePair<string, string>> variables, string outputFolder)
+        {
+            string resultText = GetFileText(templateFile);
+
+            foreach (var variable in variables)
+            {
+                resultText = resultText.Replace(urlEncodedPrefix + variable.Key + urlEncodedPostfix, HttpUtility.HtmlEncode(variable.Value));
+                resultText = resultText.Replace(prefix + variable.Key + postfix, variable.Value);
+            }
+            SaveText(resultText, Path.Combine(outputFolder, Path.GetFileName(templateFile)));
         }
 
         private static void SaveText(string fileText, string filePath)
@@ -147,7 +197,7 @@ namespace templates_replacer
             }
         }
 
-        private static string GetTemplateFileText(string filePath)
+        private static string GetFileText(string filePath)
         {
             string contents = null;
             
