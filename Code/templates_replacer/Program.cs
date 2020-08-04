@@ -152,13 +152,15 @@ namespace templates_replacer
             {
                 var resultText = GetFileText(resultFile);
                 var list = UnknownPlaceholders(resultText, prefix + "[0-9a-zA-z-]+" + postfix);
-                list.AddRange(UnknownPlaceholders(resultText, urlEncodedPrefix + "[0-9a-zA-z-]+" + urlEncodedPostfix));
+                var list2 = UnknownPlaceholders(resultText, urlEncodedPrefix + "[0-9a-zA-z-]+" + urlEncodedPostfix);
 
-                if (list.Count > 0)
+                var results = list.Distinct().Union(list2.Distinct());
+                
+                if (results.Count() > 0)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine("Found the following unknown placeholders - these were not replaced:");
-                    foreach (var item in list)
+                    foreach (var item in results)
                     {
                         Console.WriteLine(item);
                     }
@@ -167,12 +169,12 @@ namespace templates_replacer
             }
         }
 
-        private static List<string> UnknownPlaceholders(string source, string pattern)
+        private static IEnumerable<string> UnknownPlaceholders(string source, string pattern)
         {
             string search = "{{[0-9a-zA-z-]+}}";
             MatchCollection matches = Regex.Matches(source, search);
 
-            return matches.Select(m => m.ToString()).ToList();
+            return matches.Select(m => m.ToString());
         }
 
         private static void ProcessTemplateFile(string templateFile, List<KeyValuePair<string, string>> variables, string outputFolder)
@@ -222,7 +224,8 @@ namespace templates_replacer
                     string input = null;
                     while ((input = streamReader.ReadLine()) != null)
                     {
-                        if (!input.Trim().StartsWith("#"))
+
+                        if (!input.Trim().StartsWith("#") && input.Trim() != String.Empty)
                         {
                             var keyVal = input.Trim().Split('=', StringSplitOptions.RemoveEmptyEntries);
                             idList.Add(new KeyValuePair<string, string>(keyVal[0], keyVal[1]));
